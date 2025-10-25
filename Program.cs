@@ -18,6 +18,12 @@ namespace splines_and_bezier
     }
     internal class Program
     {
+        static float r = 10.0F;
+        static List<Point> pts = [];
+        static bool RenderLinear = false;
+        static bool RenderQuadratic = false;
+        static bool RenderCubic = false;
+        static bool RenderTangentLines = false;
         static readonly Random random = new();
         static int w, h;
         static Color GetRandomColor() => new(random.Next(256), random.Next(256), random.Next(256));
@@ -108,19 +114,53 @@ namespace splines_and_bezier
                 Raylib.DrawLineV(p2, p3, Color.White);
             }
         }
+        static void Render()
+        {
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Raylib.DrawCircleV(pts[i].p, r, Color.White);
+            }
+
+            float step = 0.01f;
+            if (RenderLinear && pts.Count >= 2)
+                DrawBezierLinearExpr(pts[0].p, pts[1].p, step, 5.0f, RenderTangentLines);
+            if (RenderQuadratic && pts.Count >= 3)
+                DrawBezierQuadraticExpr(pts[0].p, pts[1].p, pts[2].p, step, 5.0f, RenderTangentLines);
+            if (RenderCubic && pts.Count >= 4)
+                DrawBezierCubicExpr(pts[0].p, pts[1].p, pts[2].p, pts[3].p, step, 5.0f, RenderTangentLines);
+        }
+        static void Settings()
+        {
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Vector2 mousep = Raylib.GetMousePosition();
+                Point p = pts[i];
+                if (Raylib.CheckCollisionPointCircle(mousep, p.p, r) && Raylib.IsMouseButtonPressed(MouseButton.Right))
+                    p.dragging = true;
+                if (Raylib.IsMouseButtonReleased(MouseButton.Right))
+                    p.dragging = false;
+
+                if (p.dragging)
+                    p.p = mousep;
+
+                pts[i] = p;
+            }
+            if (Raylib.IsKeyPressed(KeyboardKey.L)) RenderLinear = !RenderLinear;
+            if (Raylib.IsKeyPressed(KeyboardKey.Q)) RenderQuadratic = !RenderQuadratic;
+            if (Raylib.IsKeyPressed(KeyboardKey.C)) RenderCubic = !RenderCubic;
+            if (Raylib.IsKeyPressed(KeyboardKey.T)) RenderTangentLines = !RenderTangentLines;
+            if (Raylib.IsKeyPressed(KeyboardKey.R)) pts.Clear();
+            if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+            {
+                pts.Add(new(Raylib.GetMousePosition()));
+            }
+        }
         static void Main()
         {
             Raylib.SetConfigFlags(ConfigFlags.AlwaysRunWindow | ConfigFlags.ResizableWindow);
             Raylib.SetTargetFPS(0);
             Raylib.InitWindow(800, 600, "curves");
 
-            float r = 10.0F;
-            List<Point> pts = [];
-            bool RenderLinear = false;
-            bool RenderQuadratic = false;
-            bool RenderCubic = false;
-            bool RenderTangentLines = false;
-            
             while (!Raylib.WindowShouldClose())
             {
                 w = Raylib.GetScreenWidth();
@@ -128,50 +168,13 @@ namespace splines_and_bezier
                 Raylib.BeginDrawing();
                 Raylib.ClearBackground(Color.Black);
 
-                if (Raylib.IsMouseButtonReleased(MouseButton.Left))
-                {
-                    pts.Add(new(Raylib.GetMousePosition()));
-                }
-                for (int i = 0; i < pts.Count; i++)
-                {
-                    Vector2 mousep = Raylib.GetMousePosition();
-                    Point p = pts[i];
-                    if (Raylib.CheckCollisionPointCircle(mousep, p.p, r) && Raylib.IsMouseButtonPressed(MouseButton.Right))
-                        p.dragging = true;
-                    if (Raylib.IsMouseButtonReleased(MouseButton.Right))
-                        p.dragging = false;
+                Render();
+                Settings();
 
-                    if (p.dragging)
-                        p.p = mousep;
-
-                    pts[i] = p;
-                }
-                for (int i = 0; i < pts.Count; i++)
-                {
-                    Raylib.DrawCircleV(pts[i].p, r, Color.White);
-                }
-
-                if (Raylib.IsKeyPressed(KeyboardKey.L)) RenderLinear = !RenderLinear;
-                if (Raylib.IsKeyPressed(KeyboardKey.Q)) RenderQuadratic = !RenderQuadratic;
-                if (Raylib.IsKeyPressed(KeyboardKey.C)) RenderCubic = !RenderCubic;
-                if (Raylib.IsKeyPressed(KeyboardKey.T)) RenderTangentLines = !RenderTangentLines;
-
-
-                float step = 0.01f;
-                if (RenderLinear && pts.Count >= 2)
-                    DrawBezierLinearExpr(pts[0].p, pts[1].p, step, 5.0f, RenderTangentLines);
-                if (RenderQuadratic && pts.Count >= 3)
-                    DrawBezierQuadraticExpr(pts[0].p, pts[1].p, pts[2].p, step, 5.0f, RenderTangentLines);
-                if (RenderCubic && pts.Count >= 4)
-                    DrawBezierCubicExpr(pts[0].p, pts[1].p, pts[2].p, pts[3].p, step, 5.0f, RenderTangentLines);
-
-                if (Raylib.IsKeyPressed(KeyboardKey.R)) pts.Clear();
                 Raylib.DrawFPS(0, 0);
                 Raylib.EndDrawing();
             }
             Raylib.CloseWindow();
-            //- is there a generalization to draw any degree of the curve
-            //- extend to 3D?
         }
     }
 }
