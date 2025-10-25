@@ -22,7 +22,7 @@ namespace splines_and_bezier
         static int w, h;
         static Color GetRandomColor() => new(random.Next(256), random.Next(256), random.Next(256));
         static Vector2 Lerp(Vector2 a, Vector2 b, float t) => a + (b - a) * (t);
-        static void DrawBezierLinearLerp(Vector2 p0, Vector2 p1, float step, float thick, bool connect = true)
+        static void DrawBezierLinearLerp(Vector2 p0, Vector2 p1, float step, float thick)
         {
             float limit = 1.0f / step;
             List<Vector2> pts = [];
@@ -33,11 +33,8 @@ namespace splines_and_bezier
                 pts.Add(p);
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
-            if (connect)
-                for (int i = 0; i < pts.Count - 1; i++)
-                    Raylib.DrawLineEx(pts[i], pts[i + 1], thick, Color.White);
         }
-        static void DrawBezierQuadraticLerp(Vector2 p0, Vector2 p1, Vector2 p2, float step, float thick, bool connect = true)
+        static void DrawBezierQuadraticLerp(Vector2 p0, Vector2 p1, Vector2 p2, float step, float thick)
         {
             float limit = 1.0f / step;
             List<Vector2> pts = [];
@@ -48,11 +45,8 @@ namespace splines_and_bezier
                 pts.Add(p);
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
-            if (connect)
-                for (int i = 0; i < pts.Count - 1; i++)
-                    Raylib.DrawLineEx(pts[i], pts[i + 1], thick, Color.White);
         }
-        static void DrawBezierCubicLerp(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float step, float thick, bool connect = true)
+        static void DrawBezierCubicLerp(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float step, float thick)
         {
             float limit = 1.0f / step;
             List<Vector2> pts = [];
@@ -64,11 +58,8 @@ namespace splines_and_bezier
                 pts.Add(p);
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
-            if (connect)
-                for (int i = 0; i < pts.Count - 1; i++)
-                    Raylib.DrawLineEx(pts[i], pts[i + 1], thick, Color.White);
         }
-        static void DrawBezierLinearExpr(Vector2 p0, Vector2 p1, float step, float thick)
+        static void DrawBezierLinearExpr(Vector2 p0, Vector2 p1, float step, float thick, bool DrawTangent)
         {
             // P = p0 +
             // t * (p1 - p0)
@@ -79,7 +70,7 @@ namespace splines_and_bezier
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
         }
-        static void DrawBezierQuadraticExpr(Vector2 p0, Vector2 p1, Vector2 p2, float step, float thick)
+        static void DrawBezierQuadraticExpr(Vector2 p0, Vector2 p1, Vector2 p2, float step, float thick, bool DrawTangent)
         {
             // P = p0 +
             // t   * (2p1 - 2p0) +
@@ -91,8 +82,13 @@ namespace splines_and_bezier
                 Vector2 p = p0 + t * a + MathF.Pow(t, 2) * b;
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
+            if (DrawTangent)
+            {
+                Raylib.DrawLineV(p0, p1, Color.White);
+                Raylib.DrawLineV(p1, p2, Color.White);
+            }
         }
-        static void DrawBezierCubicExpr(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float step, float thick)
+        static void DrawBezierCubicExpr(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float step, float thick, bool DrawTangent)
         {
             // P = p0 +
             // t   * (-3p0 + 3p1) +
@@ -106,6 +102,11 @@ namespace splines_and_bezier
                 Vector2 p = p0 + t * a + MathF.Pow(t, 2) * b + MathF.Pow(t, 3) * c;
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
+            if (DrawTangent)
+            {
+                Raylib.DrawLineV(p0, p1, Color.White);
+                Raylib.DrawLineV(p2, p3, Color.White);
+            }
         }
         static void Main()
         {
@@ -118,6 +119,8 @@ namespace splines_and_bezier
             bool RenderLinear = false;
             bool RenderQuadratic = false;
             bool RenderCubic = false;
+            bool RenderTangentLines = false;
+            
             while (!Raylib.WindowShouldClose())
             {
                 w = Raylib.GetScreenWidth();
@@ -151,14 +154,16 @@ namespace splines_and_bezier
                 if (Raylib.IsKeyPressed(KeyboardKey.L)) RenderLinear = !RenderLinear;
                 if (Raylib.IsKeyPressed(KeyboardKey.Q)) RenderQuadratic = !RenderQuadratic;
                 if (Raylib.IsKeyPressed(KeyboardKey.C)) RenderCubic = !RenderCubic;
+                if (Raylib.IsKeyPressed(KeyboardKey.T)) RenderTangentLines = !RenderTangentLines;
+
 
                 float step = 0.01f;
                 if (RenderLinear && pts.Count >= 2)
-                    DrawBezierLinearExpr(pts[0].p, pts[1].p, step, 5.0f);
+                    DrawBezierLinearExpr(pts[0].p, pts[1].p, step, 5.0f, RenderTangentLines);
                 if (RenderQuadratic && pts.Count >= 3)
-                    DrawBezierQuadraticExpr(pts[0].p, pts[1].p, pts[2].p, step, 5.0f);
+                    DrawBezierQuadraticExpr(pts[0].p, pts[1].p, pts[2].p, step, 5.0f, RenderTangentLines);
                 if (RenderCubic && pts.Count >= 4)
-                    DrawBezierCubicExpr(pts[0].p, pts[1].p, pts[2].p, pts[3].p, step, 5.0f);
+                    DrawBezierCubicExpr(pts[0].p, pts[1].p, pts[2].p, pts[3].p, step, 5.0f, RenderTangentLines);
 
                 if (Raylib.IsKeyPressed(KeyboardKey.R)) pts.Clear();
                 Raylib.DrawFPS(0, 0);
