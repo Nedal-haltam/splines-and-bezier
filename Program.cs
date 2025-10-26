@@ -90,6 +90,26 @@ namespace splines_and_bezier
                 Raylib.DrawLineV(p2, p3, Color.White);
             }
         }
+        static Vector2 DeCasteljau(List<Vector2> points, int n, float t)
+        {
+            List<Vector2> temp = new(points);
+            if (points.Count == 0) return new();
+            for (int r = 1; r <= n; r++)
+            {
+                for (int i = 0; i <= n - r; i++)
+                    temp[i] = (1 - t) * temp[i] + t * temp[i + 1];
+            }
+            return temp[0];
+        }
+        static void DrawBezierCurve_DeCasteljausAlgo(List<Vector2> ps, int n, float step, float thick)
+        {
+            Shartilities.Assert(ps.Count == n + 1, $"need {n + 1} points to draw a bezier curve of degree {n}");
+            for (float t = 0; t <= 1; t += step)
+            {
+                Vector2 p = DeCasteljau(ps, n, t);
+                Raylib.DrawCircleV(p, thick / 2, Color.White);
+            }
+        }
         static void Render()
         {
             for (int i = 0; i < pts.ps.Count; i++)
@@ -99,6 +119,7 @@ namespace splines_and_bezier
 
             float step = 0.01f;
             float thick = 5.0f;
+            DrawBezierCurve_DeCasteljausAlgo(pts.ps, pts.ps.Count - 1, step, thick);
         }
         static void Settings()
         {
