@@ -10,6 +10,11 @@
 
   <ItemGroup>
     <PackageReference Include="Raylib-cs" Version="7.0.1" />
+
+    <Reference Include="Shartilities">
+      <HintPath>..\Shartilities\bin\Debug\net8.0\Shartilities.dll</HintPath>
+    </Reference>
+
   </ItemGroup>
 
 </Project>

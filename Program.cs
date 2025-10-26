@@ -6,21 +6,20 @@ using Color = Raylib_cs.Color;
 
 namespace splines_and_bezier
 {
-    struct Point
+    struct Points
     {
-        public Point(Vector2 p)
+        public Points()
         {
-            this.p = p;
-            dragging = false;
+            draggings = [];
+            ps = [];
         }
-        public bool dragging;
-        public Vector2 p;
+        public List<bool> draggings;
+        public List<Vector2> ps;
     }
     internal class Program
     {
         static float r = 10.0F;
-        static List<Point> pts = [];
-        static bool RenderLinear = false;
+        static Points pts = new();
         static bool RenderQuadratic = false;
         static bool RenderCubic = false;
         static bool RenderTangentLines = false;
@@ -28,18 +27,6 @@ namespace splines_and_bezier
         static int w, h;
         static Color GetRandomColor() => new(random.Next(256), random.Next(256), random.Next(256));
         static Vector2 Lerp(Vector2 a, Vector2 b, float t) => a + (b - a) * (t);
-        static void DrawBezierLinearLerp(Vector2 p0, Vector2 p1, float step, float thick)
-        {
-            float limit = 1.0f / step;
-            List<Vector2> pts = [];
-            for (float i = 0; i <= limit; i++)
-            {
-                float t = i * step;
-                Vector2 p = Lerp(p0, p1, t);
-                pts.Add(p);
-                Raylib.DrawCircleV(p, thick / 2, Color.White);
-            }
-        }
         static void DrawBezierQuadraticLerp(Vector2 p0, Vector2 p1, Vector2 p2, float step, float thick)
         {
             float limit = 1.0f / step;
@@ -62,17 +49,6 @@ namespace splines_and_bezier
                 Vector2 b = Lerp(p1, p2, t);
                 Vector2 p = Lerp(Lerp(Lerp(p0, p1, t), b, t), Lerp(b, Lerp(p2, p3, t), t), t);
                 pts.Add(p);
-                Raylib.DrawCircleV(p, thick / 2, Color.White);
-            }
-        }
-        static void DrawBezierLinearExpr(Vector2 p0, Vector2 p1, float step, float thick, bool DrawTangent)
-        {
-            // P = p0 +
-            // t * (p1 - p0)
-            Vector2 a = p1 - p0;
-            for (float t = 0; t <= 1; t += step)
-            {
-                Vector2 p = p0 + t * a;
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
         }
@@ -116,43 +92,38 @@ namespace splines_and_bezier
         }
         static void Render()
         {
-            for (int i = 0; i < pts.Count; i++)
+            for (int i = 0; i < pts.ps.Count; i++)
             {
-                Raylib.DrawCircleV(pts[i].p, r, Color.White);
+                Raylib.DrawCircleV(pts.ps[i], r, Color.White);
             }
 
             float step = 0.01f;
-            if (RenderLinear && pts.Count >= 2)
-                DrawBezierLinearExpr(pts[0].p, pts[1].p, step, 5.0f, RenderTangentLines);
-            if (RenderQuadratic && pts.Count >= 3)
-                DrawBezierQuadraticExpr(pts[0].p, pts[1].p, pts[2].p, step, 5.0f, RenderTangentLines);
-            if (RenderCubic && pts.Count >= 4)
-                DrawBezierCubicExpr(pts[0].p, pts[1].p, pts[2].p, pts[3].p, step, 5.0f, RenderTangentLines);
+            float thick = 5.0f;
         }
         static void Settings()
         {
-            for (int i = 0; i < pts.Count; i++)
+            for (int i = 0; i < pts.ps.Count; i++)
             {
                 Vector2 mousep = Raylib.GetMousePosition();
-                Point p = pts[i];
-                if (Raylib.CheckCollisionPointCircle(mousep, p.p, r) && Raylib.IsMouseButtonPressed(MouseButton.Right))
-                    p.dragging = true;
+                Vector2 p = pts.ps[i];
+                if (Raylib.CheckCollisionPointCircle(mousep, p, r) && Raylib.IsMouseButtonPressed(MouseButton.Right))
+                    pts.draggings[i] = true;
                 if (Raylib.IsMouseButtonReleased(MouseButton.Right))
-                    p.dragging = false;
+                    pts.draggings[i] = false;
 
-                if (p.dragging)
-                    p.p = mousep;
+                if (pts.draggings[i])
+                    p = mousep;
 
-                pts[i] = p;
+                pts.ps[i] = p;
             }
-            if (Raylib.IsKeyPressed(KeyboardKey.L)) RenderLinear = !RenderLinear;
             if (Raylib.IsKeyPressed(KeyboardKey.Q)) RenderQuadratic = !RenderQuadratic;
             if (Raylib.IsKeyPressed(KeyboardKey.C)) RenderCubic = !RenderCubic;
             if (Raylib.IsKeyPressed(KeyboardKey.T)) RenderTangentLines = !RenderTangentLines;
-            if (Raylib.IsKeyPressed(KeyboardKey.R)) pts.Clear();
+            if (Raylib.IsKeyPressed(KeyboardKey.R)) pts.ps.Clear();
             if (Raylib.IsMouseButtonReleased(MouseButton.Left))
             {
-                pts.Add(new(Raylib.GetMousePosition()));
+                pts.ps.Add(Raylib.GetMousePosition());
+                pts.draggings.Add(false);
             }
         }
         static void Main()
