@@ -6,7 +6,7 @@ using Color = Raylib_cs.Color;
 
 namespace splines_and_bezier
 {
-    struct Points
+    struct Points<T>
     {
         public Points()
         {
@@ -14,12 +14,37 @@ namespace splines_and_bezier
             ps = [];
         }
         public List<bool> draggings;
-        public List<Vector2> ps;
+        public List<T> ps;
+    }
+    public struct Camera
+    {
+        public Camera3D Camera3D;
+        public float CameraSpeed;
+        public float ZoomSpeed;
+        public float RotationX;
+        public float RotationY;
+        public float Sensitivity;
+        public readonly void UpdateRotations()
+        {
+            Rlgl.Translatef(0.0f, 0.0f, 0.0f);
+            Rlgl.Rotatef(RotationX, 1.0f, 0.0f, 0.0f);
+            Rlgl.Rotatef(RotationY, 0.0f, 1.0f, 0.0f);
+        }
+        public void UpdateSettings()
+        {
+            if (Raylib.IsMouseButtonDown(MouseButton.Left))
+            {
+                Vector2 md = Raylib.GetMouseDelta();
+                RotationX -= md.Y * Sensitivity;
+                RotationY += md.X * Sensitivity;
+            }
+            Camera3D.Position.Z += ZoomSpeed * Raylib.GetMouseWheelMove() * Raylib.GetFrameTime();
+        }
     }
     internal class Program
     {
         static float r = 10.0F;
-        static Points pts = new();
+        static Points<Vector2> pts = new();
         static bool RenderQuadratic = false;
         static bool RenderCubic = false;
         static bool RenderTangentLines = false;
@@ -110,16 +135,55 @@ namespace splines_and_bezier
                 Raylib.DrawCircleV(p, thick / 2, Color.White);
             }
         }
-        static void Render()
+        static void Render2D()
         {
+            Raylib.BeginDrawing();
+            Raylib.ClearBackground(Color.Black);
+
             for (int i = 0; i < pts.ps.Count; i++)
             {
                 Raylib.DrawCircleV(pts.ps[i], r, Color.White);
             }
+            float step = 0.01f;
+            float thick = 5.0f;
+            DrawBezierCurve_DeCasteljausAlgo(pts.ps, pts.ps.Count - 1, step, thick);
+            Raylib.DrawFPS(0, 0);
+            Raylib.EndDrawing();
+        }
+        static void Render3D(ref Camera camera)
+        {
+            camera.UpdateSettings();
+            Raylib.BeginDrawing();
+            Raylib.ClearBackground(Color.Black);
+            Raylib.BeginMode3D(camera.Camera3D);
+            Rlgl.PushMatrix();
+            camera.UpdateRotations();
+
+
+            Vector3 c = new(0, 0, 0);
+            float s = 0.5f;
+            //Raylib.DrawCircle3D(c, s, new(0, 0, 0), 0, Color.White);
+            Raylib.DrawSphere(c, s, Color.White);
+            Raylib.DrawSphereWires(c, s, 30, 10, Color.Red);
+
+            c = new(0, 3, 0);
+            Raylib.DrawSphere(c, s, Color.White);
+            Raylib.DrawSphereWires(c, s, 30, 10, Color.Red);
+
+            c = new(-3, 0, 0);
+            Raylib.DrawSphere(c, s, Color.White);
+            Raylib.DrawSphereWires(c, s, 30, 10, Color.Red);
 
             float step = 0.01f;
             float thick = 5.0f;
             DrawBezierCurve_DeCasteljausAlgo(pts.ps, pts.ps.Count - 1, step, thick);
+
+            //Raylib.DrawCube(c, s, s, s, Color.DarkGray);
+            //Raylib.DrawCubeWires(c, s, s, s, Color.White);
+            Rlgl.PopMatrix();
+            Raylib.EndMode3D();
+            Raylib.DrawFPS(0, 0);
+            Raylib.EndDrawing();
         }
         static void Settings()
         {
@@ -153,18 +217,31 @@ namespace splines_and_bezier
             Raylib.SetTargetFPS(0);
             Raylib.InitWindow(800, 600, "curves");
 
+            Camera camera = new()
+            {
+                Camera3D = new()
+                {
+                    Position = new Vector3(0, 0, -10),
+                    Target = new Vector3(0.0f, 0.0f, 0.0f),
+                    Up = new Vector3(0.0f, 1.0f, 0.0f),
+                    FovY = 45.0f,
+                    Projection = CameraProjection.Perspective,
+                },
+                CameraSpeed = 1.0f,
+                ZoomSpeed = 300.0f,
+                RotationX = 0,
+                RotationY = 0,
+                Sensitivity = 0.3f,
+            };
+
             while (!Raylib.WindowShouldClose())
             {
                 w = Raylib.GetScreenWidth();
                 h = Raylib.GetScreenHeight();
-                Raylib.BeginDrawing();
-                Raylib.ClearBackground(Color.Black);
 
-                Render();
+                //Render2D();
+                Render3D(ref camera);
                 Settings();
-
-                Raylib.DrawFPS(0, 0);
-                Raylib.EndDrawing();
             }
             Raylib.CloseWindow();
         }
