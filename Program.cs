@@ -13,6 +13,11 @@ namespace splines_and_bezier
             draggings = [];
             ps = [];
         }
+        public void Add(T p, bool d)
+        {
+            ps.Add(p);
+            draggings.Add(d);
+        }
         public List<bool> draggings;
         public List<T> ps;
     }
@@ -45,9 +50,7 @@ namespace splines_and_bezier
     {
         static float r = 10.0F;
         static Points<Vector2> pts = new();
-        static bool RenderQuadratic = false;
-        static bool RenderCubic = false;
-        static bool RenderTangentLines = false;
+        static Points<Vector3> pts3d = new();
         static readonly Random random = new();
         static int w, h;
         static Color GetRandomColor() => new(random.Next(256), random.Next(256), random.Next(256));
@@ -150,46 +153,11 @@ namespace splines_and_bezier
             Raylib.DrawFPS(0, 0);
             Raylib.EndDrawing();
         }
-        static void Render3D(ref Camera camera)
+        static void Settings2D()
         {
-            camera.UpdateSettings();
-            Raylib.BeginDrawing();
-            Raylib.ClearBackground(Color.Black);
-            Raylib.BeginMode3D(camera.Camera3D);
-            Rlgl.PushMatrix();
-            camera.UpdateRotations();
-
-
-            Vector3 c = new(0, 0, 0);
-            float s = 0.5f;
-            //Raylib.DrawCircle3D(c, s, new(0, 0, 0), 0, Color.White);
-            Raylib.DrawSphere(c, s, Color.White);
-            Raylib.DrawSphereWires(c, s, 30, 10, Color.Red);
-
-            c = new(0, 3, 0);
-            Raylib.DrawSphere(c, s, Color.White);
-            Raylib.DrawSphereWires(c, s, 30, 10, Color.Red);
-
-            c = new(-3, 0, 0);
-            Raylib.DrawSphere(c, s, Color.White);
-            Raylib.DrawSphereWires(c, s, 30, 10, Color.Red);
-
-            float step = 0.01f;
-            float thick = 5.0f;
-            DrawBezierCurve_DeCasteljausAlgo(pts.ps, pts.ps.Count - 1, step, thick);
-
-            //Raylib.DrawCube(c, s, s, s, Color.DarkGray);
-            //Raylib.DrawCubeWires(c, s, s, s, Color.White);
-            Rlgl.PopMatrix();
-            Raylib.EndMode3D();
-            Raylib.DrawFPS(0, 0);
-            Raylib.EndDrawing();
-        }
-        static void Settings()
-        {
+            Vector2 mousep = Raylib.GetMousePosition();
             for (int i = 0; i < pts.ps.Count; i++)
             {
-                Vector2 mousep = Raylib.GetMousePosition();
                 Vector2 p = pts.ps[i];
                 if (Raylib.CheckCollisionPointCircle(mousep, p, r) && Raylib.IsMouseButtonPressed(MouseButton.Right))
                     pts.draggings[i] = true;
@@ -201,15 +169,116 @@ namespace splines_and_bezier
 
                 pts.ps[i] = p;
             }
-            if (Raylib.IsKeyPressed(KeyboardKey.Q)) RenderQuadratic = !RenderQuadratic;
-            if (Raylib.IsKeyPressed(KeyboardKey.C)) RenderCubic = !RenderCubic;
-            if (Raylib.IsKeyPressed(KeyboardKey.T)) RenderTangentLines = !RenderTangentLines;
             if (Raylib.IsKeyPressed(KeyboardKey.R)) pts.ps.Clear();
             if (Raylib.IsMouseButtonReleased(MouseButton.Left))
             {
-                pts.ps.Add(Raylib.GetMousePosition());
-                pts.draggings.Add(false);
+                pts.Add(mousep, false);
             }
+        }
+        ////////////////////////////////////////////////////////////////////
+        static Vector3 DeCasteljau3D(List<Vector3> points, float t)
+        {
+            if (points.Count == 0)
+                return Vector3.Zero;
+
+            // Make a working copy so we can interpolate in place
+            var temp = new List<Vector3>(points);
+            int n = points.Count - 1;
+
+            for (int r = 1; r <= n; r++)
+            {
+                for (int i = 0; i <= n - r; i++)
+                    temp[i] = Vector3.Lerp(temp[i], temp[i + 1], t);
+            }
+
+            return temp[0];
+        }
+
+        static void DrawBezierCurve3D(Points<Vector3> controlPoints, float size, float step, Color color)
+        {
+            if (controlPoints.ps.Count < 2)
+                return;
+
+            Vector3 prev = controlPoints.ps[0];
+            for (float t = step; t <= 1.0f + step / 2; t += step)
+            {
+                Vector3 cur = DeCasteljau3D(controlPoints.ps, t);
+                Raylib.DrawLine3D(prev, cur, color);
+                prev = cur;
+            }
+        }
+        ////////////////////////////////////////////////////////////////////
+        static float SPHERE_SIZE = 0.1f;
+        static void Render3D(ref Camera camera)
+        {
+            camera.UpdateSettings();
+            Raylib.BeginDrawing();
+            Raylib.ClearBackground(Color.Black);
+            Raylib.BeginMode3D(camera.Camera3D);
+            Rlgl.PushMatrix();
+            camera.UpdateRotations();
+
+
+            for (int i = 0; i < pts3d.ps.Count; i++)
+            {
+                Raylib.DrawSphere(pts3d.ps[i], SPHERE_SIZE, Color.Red);
+                //if (i < controlPoints.Count - 1)
+                //    Raylib.DrawLine3D(controlPoints[i], controlPoints[i + 1], Color.Gray);
+            }
+
+            float step = 0.01f;
+            DrawBezierCurve3D(pts3d, SPHERE_SIZE, step, Color.White);
+
+            Vector3 c = new(0, 0, 0);
+            float s = SPHERE_SIZE*2;
+            Raylib.DrawCube(c, s, s, s, Color.DarkGray);
+            Raylib.DrawCubeWires(c, s, s, s, Color.White);
+
+            Rlgl.PopMatrix();
+            Raylib.EndMode3D();
+            Raylib.DrawFPS(0, 0);
+            Raylib.EndDrawing();
+        }
+        static void Settings3D(ref Camera camera)
+        {
+            Vector2 mousep = Raylib.GetMousePosition();
+            Ray mouseRay = Raylib.GetScreenToWorldRay(mousep, camera.Camera3D);
+
+            for (int i = 0; i < pts3d.ps.Count; i++)
+            {
+                Vector3 p = pts3d.ps[i];
+                float radius = SPHERE_SIZE;
+                RayCollision hit = Raylib.GetRayCollisionSphere(mouseRay, p, radius);
+
+                if (hit.Hit && Raylib.IsMouseButtonPressed(MouseButton.Right))
+                    pts3d.draggings[i] = true;
+
+                if (Raylib.IsMouseButtonReleased(MouseButton.Right))
+                    pts3d.draggings[i] = false;
+
+                if (pts3d.draggings[i])
+                {
+
+                    Plane dragPlane = new Plane { Normal = new Vector3(0, 0, 1), D = -p.Z };
+                    RayCollision dragHit = Raylib.GetRayCollisionQuad(
+                        mouseRay,
+                        new Vector3(-100, -100, p.Z),
+                        new Vector3(100, -100, p.Z),
+                        new Vector3(100, 100, p.Z),
+                        new Vector3(-100, 100, p.Z)
+                    );
+
+                    if (dragHit.Hit)
+                        pts3d.ps[i] = dragHit.Point; // Move sphere along that plane
+                }
+            }
+
+            if (Raylib.IsKeyPressed(KeyboardKey.R)) pts3d.ps.Clear();
+            //if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+            //{
+            //    pts3d.ps.Add(new(mousep.X, mousep.Y, 0));
+            //    pts3d.draggings.Add(false);
+            //}
         }
         static void Main()
         {
@@ -233,6 +302,9 @@ namespace splines_and_bezier
                 RotationY = 0,
                 Sensitivity = 0.3f,
             };
+            pts3d.Add(new(0, 0, 0), false);
+            pts3d.Add(new(0, 3, 0), false);
+            pts3d.Add(new(-3, 0, 0), false);
 
             while (!Raylib.WindowShouldClose())
             {
@@ -240,8 +312,9 @@ namespace splines_and_bezier
                 h = Raylib.GetScreenHeight();
 
                 //Render2D();
+                //Settings2D();
                 Render3D(ref camera);
-                Settings();
+                Settings3D(ref camera);
             }
             Raylib.CloseWindow();
         }
