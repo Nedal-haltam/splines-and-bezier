@@ -244,13 +244,17 @@ namespace splines_and_bezier
             Vector2 mousep = Raylib.GetMousePosition();
             Ray mouseRay = Raylib.GetScreenToWorldRay(mousep, camera.Camera3D);
 
+            // change the Camera3D, invert it or flip it to go along with the backward facing
+            Ray mouseRayrev = Raylib.GetScreenToWorldRay(mousep, camera.Camera3D);
+
             for (int i = 0; i < pts3d.ps.Count; i++)
             {
                 Vector3 p = pts3d.ps[i];
                 float radius = SPHERE_SIZE;
                 RayCollision hit = Raylib.GetRayCollisionSphere(mouseRay, p, radius);
+                RayCollision hitrev = Raylib.GetRayCollisionSphere(mouseRayrev, p, radius);
 
-                if (hit.Hit && Raylib.IsMouseButtonPressed(MouseButton.Right))
+                if ((hit.Hit || hitrev.Hit) && Raylib.IsMouseButtonPressed(MouseButton.Right))
                     pts3d.draggings[i] = true;
 
                 if (Raylib.IsMouseButtonReleased(MouseButton.Right))
@@ -269,7 +273,7 @@ namespace splines_and_bezier
                     );
 
                     if (dragHit.Hit)
-                        pts3d.ps[i] = dragHit.Point; // Move sphere along that plane
+                        pts3d.ps[i] = dragHit.Point;
                 }
             }
 
@@ -316,6 +320,8 @@ namespace splines_and_bezier
                 Render3D(ref camera);
                 Settings3D(ref camera);
             }
+            // apply the concept in moving things around or any interesting application
+            // try bezier surface
             Raylib.CloseWindow();
         }
     }
